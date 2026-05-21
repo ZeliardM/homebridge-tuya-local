@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://docs.nubisco.io/homebridge-tuya-local/
+    about: Check the docs before opening an issue. Many setup questions are already covered.
+  - name: Discussions
+    url: https://github.com/nubisco/homebridge-tuya-local/discussions
+    about: Ask questions and share device configuration tips with the community.
+  - name: Security policy
+    url: https://github.com/nubisco/homebridge-tuya-local/blob/master/SECURITY.md
+    about: Report vulnerabilities privately using the project's responsible disclosure process.

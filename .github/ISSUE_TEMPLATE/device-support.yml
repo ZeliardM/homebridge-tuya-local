@@ -1,0 +1,69 @@
+name: Device support request
+description: Request support for a Tuya device that is not fully supported yet
+labels: [device-support]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing device details. This information helps us evaluate support faster.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-flight checklist
+      options:
+        - label: I have searched existing issues and this device hasn't been requested yet
+          required: true
+        - label: I have confirmed the device uses the Tuya protocol (Wi-Fi, not Zigbee/BLE-only)
+          required: true
+
+  - type: input
+    id: device_model
+    attributes:
+      label: Device model
+      description: Brand + model name
+      placeholder: Generic Brand Smart Humidifier XYZ-200
+    validations:
+      required: true
+
+  - type: input
+    id: tuya_category
+    attributes:
+      label: Tuya category (if known)
+      placeholder: e.g. dj, kg, fs, wk
+
+  - type: input
+    id: product_id
+    attributes:
+      label: Tuya product ID (if known)
+      placeholder: e.g. abcdef1234567890
+
+  - type: textarea
+    id: dps_details
+    attributes:
+      label: DataPoints (DPS) details
+      description: Include DP ids, names, and expected values/ranges where possible.
+      render: json
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Paste Homebridge logs while interacting with this device.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots (optional)
+      description: Add screenshots of Tuya IoT DP schema, product page, or Home app behavior if helpful.
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Anything else maintainers should know

@@ -1,46 +1,71 @@
 {
   "name": "homebridge-tuya-local",
-  "version": "3.1.5",
-  "description": "🏠 Control Tuya Accessories Locally with Homebridge",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "bin": {
-    "tuya-lan": "./bin/cli.js",
-    "tuya-lan-find": "./bin/cli-find.js",
-    "tuya-lan-decode": "./bin/cli-decode.js"
-  },
+  "version": "3.2.0",
+  "private": true,
+  "description": "Homebridge plugin to control Tuya devices locally over LAN",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ayushsharma82/homebridge-tuya-local.git"
+    "url": "git+https://github.com/ZeliardM/homebridge-tuya-local.git"
   },
-  "author": "Rayan Khan (maintained by @ayushsharma82)",
+  "author": "Rayan Khan (maintained by @ayushsharma82); personal fork by ZeliardM",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ayushsharma82/homebridge-tuya-local/issues"
+    "url": "https://github.com/ZeliardM/homebridge-tuya-local/issues"
   },
-  "homepage": "https://github.com/ayushsharma82/homebridge-tuya-local#readme",
-  "dependencies": {
-    "async": "^3.2.2",
-    "commander": "^3.0.1",
-    "fs-extra": "^8.1.0",
-    "http-mitm-proxy": "^1.1.0",
-    "json5": "^2.2.0",
-    "qrcode": "^1.4.1",
-    "yaml": "^1.6.0"
-  },
+  "homepage": "https://github.com/ZeliardM/homebridge-tuya-local#readme",
   "keywords": [
     "homebridge-plugin",
     "homebridge",
-    "local",
-    "control",
     "homebridge-tuya-local",
     "tuya",
-    "lan"
+    "tuya-lan",
+    "local"
   ],
   "engines": {
-    "homebridge": ">=0.4.0",
-    "node": ">=8.6.0"
+    "homebridge": "^1.6.0 || ^2.0.0",
+    "node": "^22.12.0 || ^24.0.0"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "homebridge-ui",
+    "config.schema.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/",
+    "lint:fix": "eslint --fix src/",
+    "types:check": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "quality:check": "npm test && npm run lint && npm run format:check && npm run types:check"
+  },
+  "dependencies": {
+    "@homebridge/plugin-ui-utils": "^2.2.3",
+    "async": "^3.2.6",
+    "dirigera": "^1.8.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/async": "^3.2.25",
+    "@types/node": "^25.9.1",
+    "@vitest/coverage-v8": "^4.1.7",
+    "@vitest/ui": "^4.1.7",
+    "eslint": "^10.4.0",
+    "eslint-config-prettier": "^10.1.8",
+    "homebridge": "^2.0.2",
+    "prettier": "^3.8.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.4",
+    "vitest": "^4.1.7"
+  },
+  "overrides": {
+    "node-persist": "4.0.4"
   }
 }
