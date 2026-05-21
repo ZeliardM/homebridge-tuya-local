@@ -1,6 +1,6 @@
 {
   "name": "homebridge-tuya-local",
-  "version": "3.2.0",
+  "version": "4.0.0",
   "private": true,
   "description": "Homebridge plugin to control Tuya devices locally over LAN",
   "repository": {
