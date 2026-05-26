@@ -13,6 +13,16 @@
     "url": "https://github.com/ZeliardM/homebridge-tuya-local/issues"
   },
   "homepage": "https://github.com/ZeliardM/homebridge-tuya-local#readme",
+  "funding": [
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/ZeliardM"
+    },
+    {
+      "type": "paypal",
+      "url": "https://www.paypal.me/ZeliardM/USD"
+    }
+  ],
   "keywords": [
     "homebridge-plugin",
     "homebridge",

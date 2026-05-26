@@ -8,7 +8,7 @@ export interface DirigeraContactSensorConfig {
 }
 
 export interface ContactSensorUpdate {
-  isOpen: boolean
+  isOpen?: boolean
   batteryPercentage?: number
 }
 
@@ -63,7 +63,11 @@ class DirigeraContactSensorClient extends EventEmitter {
     this.client.startListeningForUpdates((event: any) => {
       if (event?.type !== 'deviceStateChanged') return
       if (event.data?.id !== this.config.deviceId) return
-      if (typeof event.data?.attributes?.isOpen !== 'boolean') return
+      if (
+        typeof event.data?.attributes?.isOpen !== 'boolean' &&
+        typeof event.data?.attributes?.batteryPercentage !== 'number'
+      )
+        return
 
       this.applyUpdate({
         isOpen: event.data.attributes.isOpen,
@@ -81,7 +85,9 @@ class DirigeraContactSensorClient extends EventEmitter {
   }
 
   private applyUpdate(update: ContactSensorUpdate): void {
-    this.currentOpen = update.isOpen
+    if (typeof update.isOpen === 'boolean') {
+      this.currentOpen = update.isOpen
+    }
     this.emit('change', update)
   }
 }

@@ -35,6 +35,9 @@ export function createMockCharacteristic() {
     CurrentDoorState: { OPEN: 0, CLOSED: 1, OPENING: 2, CLOSING: 3, STOPPED: 4 },
     TargetDoorState: { OPEN: 0, CLOSED: 1 },
     ContactSensorState: { CONTACT_DETECTED: 0, CONTACT_NOT_DETECTED: 1 },
+    BatteryLevel: 'battery-level',
+    ChargingState: { CHARGING: 0, NOT_CHARGING: 1, NOT_CHARGEABLE: 2 },
+    StatusLowBattery: { BATTERY_LEVEL_NORMAL: 0, BATTERY_LEVEL_LOW: 1 },
     SecuritySystemCurrentState: { STAY_ARM: 0, AWAY_ARM: 1, NIGHT_ARM: 2, DISARMED: 3, ALARM_TRIGGERED: 4 },
     SecuritySystemTargetState: { STAY_ARM: 0, AWAY_ARM: 1, NIGHT_ARM: 2, DISARM: 3 },
     LockCurrentState: 'lock-current',
@@ -66,6 +69,7 @@ export function createMockService() {
     Lightbulb: { UUID: 'lightbulb-uuid' },
     Switch: { UUID: 'switch-uuid' },
     Door: { UUID: 'door-uuid' },
+    Battery: { UUID: 'battery-uuid' },
     GarageDoorOpener: { UUID: 'garage-door-opener-uuid' },
     SecuritySystem: { UUID: 'security-system-uuid' },
   }
@@ -238,6 +242,13 @@ function createMockHAPService(type: string, displayName?: string, subtype?: stri
       return this
     }),
     removeCharacteristic: vi.fn(),
+    linkedServices: [],
+    addLinkedService: vi.fn(function (this: any, linkedService: any) {
+      if (!this.linkedServices.includes(linkedService)) {
+        this.linkedServices.push(linkedService)
+      }
+      return this
+    }),
   }
 
   return service

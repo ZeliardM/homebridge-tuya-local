@@ -9,6 +9,7 @@ type DoorMovement = 'idle' | 'opening' | 'closing' | 'stopped'
 const CLOSED_POSITION = 0
 const OPEN_POSITION = 100
 const DEFAULT_MOVEMENT_TIMEOUT_SECONDS = 30
+const LOW_BATTERY_THRESHOLD = 20
 
 class UniversalRemoteDoorAccessory extends BaseAccessory {
   static getCategory(Categories: any): number {
@@ -16,15 +17,20 @@ class UniversalRemoteDoorAccessory extends BaseAccessory {
   }
 
   private doorService: any
+  private batteryService: any
   private securitySystemService: any
   private characteristicTargetPosition: any
   private characteristicCurrentPosition: any
   private characteristicPositionState: any
+  private characteristicBatteryLevel: any
+  private characteristicChargingState: any
+  private characteristicStatusLowBattery: any
   private characteristicTargetSecuritySystemState: any
   private characteristicCurrentSecuritySystemState: any
 
   private contactClient?: DirigeraContactSensorClient
   private contactOpen?: boolean
+  private batteryPercentage?: number
   private mode: DoorMode = 'manual'
   private movement: DoorMovement = 'idle'
   private targetPosition!: number
@@ -38,6 +44,7 @@ class UniversalRemoteDoorAccessory extends BaseAccessory {
   _registerPlatformAccessory(): void {
     const { Service } = this.hap
     this.accessory.addService(Service.Door, this.device.context.name)
+    this.accessory.addService(Service.Battery, `${this.device.context.name} Battery`)
     this.accessory.addService(Service.SecuritySystem, `${this.device.context.name} Mode`)
     super._registerPlatformAccessory()
   }
@@ -48,6 +55,12 @@ class UniversalRemoteDoorAccessory extends BaseAccessory {
     this.doorService =
       this.accessory.getService(Service.Door) || this.accessory.addService(Service.Door, this.device.context.name)
     this._checkServiceName(this.doorService, this.device.context.name)
+
+    this.batteryService =
+      this.accessory.getService(Service.Battery) ||
+      this.accessory.addService(Service.Battery, `${this.device.context.name} Battery`)
+    this._checkServiceName(this.batteryService, `${this.device.context.name} Battery`)
+    this.linkBatteryServiceToDoor()
 
     const legacyContactSensorService = this.accessory.getService(Service.ContactSensor)
     if (legacyContactSensorService) {
@@ -62,6 +75,7 @@ class UniversalRemoteDoorAccessory extends BaseAccessory {
 
     this.mode = this.getStoredMode()
     this.contactOpen = this.getStoredContactOpen()
+    this.batteryPercentage = this.getStoredBatteryPercentage()
     this.targetPosition = this.contactOpen === undefined ? CLOSED_POSITION : this.getPositionForContact()
 
     this.characteristicTargetPosition = this.doorService
@@ -82,6 +96,25 @@ class UniversalRemoteDoorAccessory extends BaseAccessory {
       .getCharacteristic(Characteristic.PositionState)
       .updateValue(Characteristic.PositionState.STOPPED)
       .on('get', this.getPositionState.bind(this))
+
+    this.characteristicBatteryLevel = this.batteryService
+      .getCharacteristic(Characteristic.BatteryLevel)
+      .updateValue(
+        this.batteryPercentage === undefined ? this.getBatteryLevelNotReportedError() : this.batteryPercentage,
+      )
+      .on('get', this.getBatteryLevel.bind(this))
+
+    this.characteristicChargingState = this.batteryService
+      .getCharacteristic(Characteristic.ChargingState)
+      .updateValue(Characteristic.ChargingState.NOT_CHARGEABLE)
+      .on('get', this.getChargingState.bind(this))
+
+    this.characteristicStatusLowBattery = this.batteryService
+      .getCharacteristic(Characteristic.StatusLowBattery)
+      .updateValue(
+        this.batteryPercentage === undefined ? this.getBatteryLevelNotReportedError() : this.getLowBatteryValue(),
+      )
+      .on('get', this.getStatusLowBattery.bind(this))
 
     this.characteristicCurrentSecuritySystemState = this.securitySystemService
       .getCharacteristic(Characteristic.SecuritySystemCurrentState)
@@ -186,6 +219,20 @@ class UniversalRemoteDoorAccessory extends BaseAccessory {
 
   getPositionState(callback: HomebridgeCallback): void {
     callback(null, this.getPositionStateValue())
+  }
+
+  getBatteryLevel(callback: HomebridgeCallback): void {
+    if (this.batteryPercentage === undefined) return callback(this.getBatteryLevelNotReportedError())
+    callback(null, this.batteryPercentage)
+  }
+
+  getChargingState(callback: HomebridgeCallback): void {
+    callback(null, this.hap.Characteristic.ChargingState.NOT_CHARGEABLE)
+  }
+
+  getStatusLowBattery(callback: HomebridgeCallback): void {
+    if (this.batteryPercentage === undefined) return callback(this.getBatteryLevelNotReportedError())
+    callback(null, this.getLowBatteryValue())
   }
 
   getCurrentSecuritySystemState(callback: HomebridgeCallback): void {
@@ -315,7 +362,8 @@ class UniversalRemoteDoorAccessory extends BaseAccessory {
     )
 
     this.contactClient.on('change', (update) => {
-      this.applyContactState(update.isOpen)
+      if (typeof update.isOpen === 'boolean') this.applyContactState(update.isOpen)
+      if (typeof update.batteryPercentage === 'number') this.applyBatteryLevel(update.batteryPercentage)
     })
 
     this.contactClient.start().catch((err) => {
@@ -357,6 +405,30 @@ class UniversalRemoteDoorAccessory extends BaseAccessory {
     }
 
     this.syncDoorCharacteristics()
+  }
+
+  private applyBatteryLevel(batteryPercentage: number): void {
+    if (!Number.isFinite(batteryPercentage)) return
+
+    const previous = this.batteryPercentage
+    const next = Math.max(0, Math.min(100, Math.round(batteryPercentage)))
+
+    this.batteryPercentage = next
+    this.accessory.context.dirigeraBatteryPercentage = next
+
+    if (previous === undefined) {
+      this.log.info(
+        '[UniversalRemoteDoor] Battery level for %s is %s%% from the DIRIGERA contact sensor.',
+        this.device.context.name,
+        next,
+      )
+    } else if (previous !== next) {
+      this.log.info('[UniversalRemoteDoor] Battery level changed for %s: %s%%.', this.device.context.name, next)
+    } else {
+      this.log.debug('[UniversalRemoteDoor] Battery level for %s remains %s%%.', this.device.context.name, next)
+    }
+
+    this.syncBatteryCharacteristics()
   }
 
   private getCurrentPositionValue(): number {
@@ -425,6 +497,29 @@ class UniversalRemoteDoorAccessory extends BaseAccessory {
     const target = this.getTargetSecuritySystemStateValue()
     if (this.characteristicTargetSecuritySystemState?.value !== target) {
       this.characteristicTargetSecuritySystemState?.updateValue(target)
+    }
+  }
+
+  private syncBatteryCharacteristics(): void {
+    if (this.batteryPercentage === undefined) {
+      const error = this.getBatteryLevelNotReportedError()
+      this.characteristicBatteryLevel?.updateValue(error)
+      this.characteristicStatusLowBattery?.updateValue(error)
+      return
+    }
+
+    if (this.characteristicBatteryLevel?.value !== this.batteryPercentage) {
+      this.characteristicBatteryLevel?.updateValue(this.batteryPercentage)
+    }
+
+    const statusLowBattery = this.getLowBatteryValue()
+    if (this.characteristicStatusLowBattery?.value !== statusLowBattery) {
+      this.characteristicStatusLowBattery?.updateValue(statusLowBattery)
+    }
+
+    const chargingState = this.hap.Characteristic.ChargingState.NOT_CHARGEABLE
+    if (this.characteristicChargingState?.value !== chargingState) {
+      this.characteristicChargingState?.updateValue(chargingState)
     }
   }
 
@@ -527,8 +622,34 @@ class UniversalRemoteDoorAccessory extends BaseAccessory {
     return typeof this.accessory.context.contactOpen === 'boolean' ? this.accessory.context.contactOpen : undefined
   }
 
+  private getStoredBatteryPercentage(): number | undefined {
+    const value = Number(this.accessory.context.dirigeraBatteryPercentage)
+    if (!Number.isFinite(value)) return undefined
+    return Math.max(0, Math.min(100, Math.round(value)))
+  }
+
   private getContactSensorNotReportedError(): Error {
     return new Error('DIRIGERA contact sensor has not reported yet')
+  }
+
+  private getBatteryLevelNotReportedError(): Error {
+    return new Error('DIRIGERA contact sensor battery level has not reported yet')
+  }
+
+  private getLowBatteryValue(): number {
+    const { Characteristic } = this.hap
+    return this.batteryPercentage !== undefined && this.batteryPercentage <= LOW_BATTERY_THRESHOLD
+      ? Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW
+      : Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL
+  }
+
+  private linkBatteryServiceToDoor(): void {
+    if (!this.doorService || !this.batteryService || typeof this.doorService.addLinkedService !== 'function') return
+
+    const linkedServices = this.doorService.linkedServices
+    if (Array.isArray(linkedServices) && linkedServices.includes(this.batteryService)) return
+
+    this.doorService.addLinkedService(this.batteryService)
   }
 
   private getDoorToggleCode(): string | undefined {

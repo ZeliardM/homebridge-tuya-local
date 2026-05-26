@@ -70,6 +70,41 @@ describe('UniversalRemoteDoorAccessory', () => {
     expect(accessory.getService(hap.Service.ContactSensor)).toBeUndefined()
   })
 
+  it('adds a Battery service linked to the Door service using cached DIRIGERA battery level', () => {
+    const { accessory, door, hap } = createDoorAccessory({ dirigeraBatteryPercentage: 87 })
+
+    const batteryService = accessory.getService(hap.Service.Battery)
+
+    expect(batteryService).toBeDefined()
+    expect(door.doorService.linkedServices).toContain(batteryService)
+    expect(door.doorService.addLinkedService).toHaveBeenCalledWith(batteryService)
+    expect(door.characteristicBatteryLevel.value).toBe(87)
+    expect(door.characteristicChargingState.value).toBe(hap.Characteristic.ChargingState.NOT_CHARGEABLE)
+    expect(door.characteristicStatusLowBattery.value).toBe(hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL)
+  })
+
+  it('updates the Battery service from DIRIGERA battery reports', () => {
+    const { accessory, door, hap, log } = createDoorAccessory()
+
+    door.applyBatteryLevel(18)
+
+    expect(accessory.context.dirigeraBatteryPercentage).toBe(18)
+    expect(door.characteristicBatteryLevel.value).toBe(18)
+    expect(door.characteristicStatusLowBattery.value).toBe(hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW)
+    expect(door.characteristicChargingState.value).toBe(hap.Characteristic.ChargingState.NOT_CHARGEABLE)
+    expect(log.info).toHaveBeenCalledWith(
+      '[UniversalRemoteDoor] Battery level for %s is %s%% from the DIRIGERA contact sensor.',
+      'Test Door',
+      18,
+    )
+
+    door.applyBatteryLevel(55)
+
+    expect(accessory.context.dirigeraBatteryPercentage).toBe(55)
+    expect(door.characteristicBatteryLevel.value).toBe(55)
+    expect(door.characteristicStatusLowBattery.value).toBe(hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL)
+  })
+
   it('removes an exposed HomeKit contact sensor from cached door accessories', () => {
     const log = createMockLogger()
     const device = createMockTuyaDevice({
